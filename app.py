@@ -20,8 +20,9 @@ from openai import APIConnectionError, APIError, AuthenticationError, RateLimitE
 from pydantic import BaseModel, ConfigDict, Field
 from typing import AsyncIterator, List
 
-from services.characters import Character, get_character, list_characters
+from services.characters import Character, get_character, get_story_character, list_characters
 from services.llm import LLMConfigurationError, LLMResponseError, generate_response
+from services.zep_memory import ingest_story, search_story
 from services.memory import (
     add_message,
     authenticate_user,
@@ -38,13 +39,31 @@ from services.stt import transcribe
 from services.tts import tts_bytes
 
 
+# ── Story transcripts: ingest once into Zep on startup ───────────────────
+def _seed_stories() -> None:
+    """Push story transcripts into Zep graph DB (skipped if already seeded)."""
+    stories_dir = Path("storeis")
+    story_map = {
+        "princess": stories_dir / "princess.txt",
+        "yodha": stories_dir / "yodha.txt",
+    }
+    for story_id, path in story_map.items():
+        if path.exists():
+            try:
+                ingest_story(story_id, path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                print(f"[startup] Could not seed story '{story_id}': {exc}")
+
+
 app = FastAPI(title="AI Character API", version="0.6.0")
 init_db()
+_seed_stories()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Transcript", "X-Reply", "X-Character-Id"],
 )
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 app.mount("/posters", StaticFiles(directory="posters"), name="posters")
@@ -188,6 +207,84 @@ def clear_session(user_id: str, character_id: str = "barbie") -> None:
     clear_memory(user_id, character_id)
 
 
+# ── Story voice-chat ───────────────────────────────────────────────────────
+# Story characters (e.g. _story_princess) use Zep graph search to pull
+# relevant plot facts and inject them into the system prompt before calling
+# the LLM. This gives the character accurate, story-grounded answers.
+
+_STORY_GRAPH_MAP: dict[str, str] = {
+    "_story_princess": "princess",
+    "_story_yodha": "yodha",
+}
+
+
+@app.post("/story-voice-chat")
+async def story_voice_chat(
+    audio: UploadFile = File(...),
+    user_id: str = "default",
+    character_id: str = "_story_princess",
+) -> StreamingResponse:
+    """Voice chat endpoint for story characters backed by Zep graph memory."""
+    character = get_story_character(character_id)
+    if not character:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story character not found.")
+
+    profile = get_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    raw = await audio.read()
+    filename = audio.filename or "audio.webm"
+
+    try:
+        transcript = transcribe(raw, filename)
+
+        # ── Zep graph search: pull story facts relevant to user's question ──
+        story_graph = _STORY_GRAPH_MAP.get(character_id, "")
+        story_context = ""
+        if story_graph:
+            story_context = search_story(story_graph, transcript)
+
+        # ── Build enriched system prompt ─────────────────────────────────
+        memory_block = _memory_prompt(profile, character_id)
+        if story_context:
+            system_prompt = (
+                f"{character.prompt}\n\n"
+                f"STORY CONTEXT (facts retrieved from your story's knowledge graph — "
+                f"treat these as your own memories):\n{story_context}\n\n"
+                f"{memory_block}"
+            )
+        else:
+            system_prompt = f"{character.prompt}\n\n{memory_block}"
+
+        reply = generate_response(
+            transcript,
+            get_short_term_memory(user_id, character_id),
+            system_prompt,
+        )
+        response_audio = tts_bytes(reply, character.voice_id)
+
+    except LLMConfigurationError as error:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
+    except (AuthenticationError, RateLimitError, APIConnectionError, APIError) as error:
+        raise _openai_http_errors(error) from error
+    except LLMResponseError as error:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="The language model returned an invalid response.") from error
+
+    _update_memories(user_id, character_id, transcript, reply)
+
+    return StreamingResponse(
+        iter([response_audio]),
+        media_type="audio/mpeg",
+        headers={
+            "Content-Disposition": f"inline; filename={character.id}-reply.mp3",
+            "X-Transcript": quote(transcript, safe=""),
+            "X-Reply": quote(reply, safe=""),
+            "X-Character-Id": character_id,
+        },
+    )
+
+
 class DebateRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     character_ids: List[str] = Field(..., min_length=2)
@@ -212,8 +309,9 @@ def _build_instruction(
     if not round_turns and not position_anchor:
         # Very first speaker of the entire debate
         return (
-            f"You are the first to speak in a debate on: \"{topic}\".\n"
-            "State your opening position clearly and confidently in character. Under 80 words."
+            f"Topic: \"{topic}\".\n"
+            "You are speaking first. Just say your one main take on this — like you would in a real conversation. "
+            "One point, your own words, under 60 words."
         )
 
     context_parts: list[str] = []
@@ -221,38 +319,36 @@ def _build_instruction(
     # Anchor: remind the character of their own stated position
     if position_anchor:
         context_parts.append(
-            f"YOUR POSITION (what you said in round 1 — stay consistent with this):\n"
+            f"YOUR TAKE (stay consistent with this):\n"
             f"  \"{position_anchor}\""
         )
 
     if rolling_summary:
-        context_parts.append(f"Summary of previous rounds:\n{rolling_summary}")
+        context_parts.append(f"What has been said so far:\n{rolling_summary}")
 
     if round_turns:
         transcript = "\n".join(f"  {t['name']}: {t['argument']}" for t in round_turns)
-        context_parts.append(f"This round so far:\n{transcript}")
+        context_parts.append(f"This round:\n{transcript}")
 
     last = round_turns[-1] if round_turns else None
     context = "\n\n".join(context_parts)
 
     reaction = (
-        f"React to what has been said — you can push back on {last['name']}'s point, "
-        f"agree with someone, or steer the debate. "
+        f"Respond to what {last['name']} just said — agree, push back, or add something. "
         if last else
-        "State your opening position on this topic. "
+        "Share your take on this topic. "
     )
 
     return (
-        f"You are debating the topic: \"{topic}\".\n\n"
+        f"Topic: \"{topic}\".\n\n"
         f"{context}\n\n"
-        f"Now it is YOUR turn as {char_name}.\n"
+        f"Your turn, {char_name}.\n"
         f"{reaction}"
-        f"Speak naturally, as if mid-conversation. "
-        f"Do NOT open with someone's name as a formal address. "
+        f"Make just ONE point. Talk like a real person, not a speech. "
+        f"Do NOT start with someone's name. "
         f"Do NOT start with 'I'. "
-        f"IMPORTANT: Do not contradict your own position stated above — you may refine it, "
-        f"but your core stance must stay the same. "
-        f"Under 80 words. Stay fully in character."
+        f"Do not contradict your own take above. "
+        f"Under 60 words. Stay in character."
     )
 
 
@@ -265,31 +361,34 @@ def _moderator_pick_with_intro(
     over to the next speaker — e.g. "Victor, you have been quiet. What is
     your take?" Returns a fallback if the LLM call fails.
     """
-    transcript = "\n".join(f"  {t['name']}: {t['argument']}" for t in round_turns)
+    # Build a short transcript (just names + truncated argument) to keep tokens low
+    transcript = "\n".join(f"  {t['name']}: {t['argument'][:80]}" for t in round_turns)
     names_str = ", ".join(remaining)
     system = (
         "You are Alex, a debate moderator. "
         "Reply in EXACTLY this format — two lines, nothing else:\n"
         "NEXT: <name>\n"
         "INTRO: <sentence of 10 words or fewer handing the floor to them>\n"
-        f"Choose NEXT from: {names_str}. "
+        f"You MUST choose NEXT from this exact list only: {names_str}. "
+        "Do NOT pick anyone not on this list. "
         "The INTRO must be a plain handover, e.g. 'Over to Victor.' or 'Francis, your thoughts?'"
     )
     try:
         raw = generate_response(
-            f"Topic: \"{topic}\"\n\nExchange:\n{transcript}\n\nWho speaks next?",
+            f"Topic: \"{topic}\"\n\nExchange so far:\n{transcript}\n\nWho speaks next?",
             None,
             system,
             max_tokens=40,
         )
-        next_name = remaining[0]
+        next_name = remaining[0]  # safe default
         intro = ""
         for line in raw.splitlines():
             line = line.strip()
             if line.upper().startswith("NEXT:"):
-                candidate = line[5:].strip().rstrip(".,!?")
+                candidate = line[5:].strip().rstrip(".,!?").strip()
+                # Strict: only accept an exact case-insensitive match from remaining
                 for name in remaining:
-                    if name.lower() in candidate.lower() or candidate.lower() in name.lower():
+                    if name.lower() == candidate.lower():
                         next_name = name
                         break
             elif line.upper().startswith("INTRO:"):
@@ -300,22 +399,24 @@ def _moderator_pick_with_intro(
 
 
 def _moderator_summary(topic: str, round_turns: list[dict], round_num: int) -> str:
-    """One-sentence-per-speaker summary spoken by the moderator to close the round."""
+    """Round-closing summary: recap what was said, call out the strongest points, give a brief conclusion."""
     names = [t["name"] for t in round_turns]
     transcript = "\n".join(f"  {t['name']}: {t['argument']}" for t in round_turns)
     system = (
-        "You are Alex, a concise debate moderator. "
-        f"Write EXACTLY {len(names)} short sentences — one per speaker — "
-        "each stating that speaker's main point in plain English. "
-        "Total reply must be under 50 words. No names as labels, weave them in naturally. "
-        "No headings, no bullet points, no extra commentary."
+        "You are Alex, a debate moderator wrapping up a round. "
+        "Write a short, natural closing in three parts — no headings, no bullet points, just flowing speech:\n"
+        "1. A one-sentence recap of what the round was about.\n"
+        "2. Call out one or two speakers by name who made the most relevant or interesting points — "
+        "give a genuine, specific reason why their point stood out. Keep it casual and real, not over-the-top.\n"
+        "3. One short concluding thought that ties the round together or teases what is still unresolved.\n"
+        "Total reply must be under 90 words. Plain conversational English — talk like a real person, not a formal host."
     )
     try:
         return generate_response(
-            f"Summarise round {round_num} on \"{topic}\":\n{transcript}",
+            f"Round {round_num} of the debate on \"{topic}\":\n{transcript}\n\nClose out the round.",
             None,
             system,
-            max_tokens=80,
+            max_tokens=130,
         )
     except Exception:
         return " ".join(f"{t['name']} argued {t['argument'][:40]}…" for t in round_turns)

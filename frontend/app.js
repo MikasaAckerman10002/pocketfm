@@ -319,8 +319,11 @@ $id('record-button').onclick = async () => {
     const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
     const form = new FormData();
     form.append('audio', blob, 'voice-note.webm');
+    // Story characters (ids starting with _story_) use the Zep-backed endpoint
+    const isStoryChar = currentCharacter.id.startsWith('_story_');
+    const chatEndpoint = isStoryChar ? '/story-voice-chat' : '/voice-chat';
     const res = await fetch(
-      `/voice-chat?character_id=${encodeURIComponent(currentCharacter.id)}&user_id=${encodeURIComponent(currentUser.user_id)}`,
+      `${chatEndpoint}?character_id=${encodeURIComponent(currentCharacter.id)}&user_id=${encodeURIComponent(currentUser.user_id)}`,
       { method: 'POST', body: form }
     );
     if (!res.ok) {
@@ -417,6 +420,24 @@ function renderDebateCharacters() {
   });
 }
 
+let _debateAbort  = null;   // AbortController for the fetch
+let _debateStopped = false;  // flag read by consumeDebateStream
+
+function _stopDebate() {
+  _debateStopped = true;
+  if (_debateAbort) { _debateAbort.abort(); _debateAbort = null; }
+  // Silence any currently playing audio immediately
+  const player = $id('debate-player');
+  player.pause();
+  player.src = '';
+  $id('arena-typing').classList.add('hidden');
+  $id('arena-stop-btn').classList.add('hidden');
+  addModeratorBubble('Debate stopped.', 'summary');
+  $id('start-debate-button').disabled = false;
+}
+
+$id('arena-stop-btn').onclick = _stopDebate;
+
 $id('start-debate-button').onclick = async () => {
   if (selectedDebateCharacters.size < 2) {
     $id('debate-status').textContent = 'Please select at least 2 characters.';
@@ -436,35 +457,45 @@ $id('start-debate-button').onclick = async () => {
   $id('arena-topic-text').textContent = topic;
   $id('arena-feed').innerHTML = '';
   $id('arena-typing').classList.add('hidden');
+  $id('arena-stop-btn').classList.remove('hidden');
+  $id('debate-player').style.display = 'block';
+
+  _debateStopped = false;
+  _debateAbort   = new AbortController();
 
   try {
     const res = await fetch('/debate/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic, character_ids: Array.from(selectedDebateCharacters), rounds }),
+      signal: _debateAbort.signal,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Stream failed' }));
       $id('debate-status').textContent = `Error: ${err.detail}`;
       $id('debate-setup').classList.remove('hidden');
       $id('debate-arena').classList.add('hidden');
+      $id('arena-stop-btn').classList.add('hidden');
       $id('start-debate-button').disabled = false;
       return;
     }
     await consumeDebateStream(res.body);
   } catch (err) {
-    $id('debate-status').textContent = `Error: ${err.message}`;
-    $id('debate-setup').classList.remove('hidden');
-    $id('debate-arena').classList.add('hidden');
+    if (!_debateStopped) {
+      $id('debate-status').textContent = `Error: ${err.message}`;
+      $id('debate-setup').classList.remove('hidden');
+      $id('debate-arena').classList.add('hidden');
+    }
   }
+  $id('arena-stop-btn').classList.add('hidden');
   $id('start-debate-button').disabled = false;
 };
 
 $id('arena-reset-btn').onclick = () => {
+  _stopDebate();
   $id('debate-arena').classList.add('hidden');
   $id('debate-setup').classList.remove('hidden');
   $id('debate-status').textContent = '';
-  $id('start-debate-button').disabled = false;
 };
 
 // ── SSE stream helpers ──────────────────────────────
@@ -472,13 +503,21 @@ $id('arena-reset-btn').onclick = () => {
 function playBase64Audio(b64) {
   return new Promise(resolve => {
     const player = $id('debate-player');
-    const url = `data:audio/mpeg;base64,${b64}`;
-    if (player.src && player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
-    player.onended = () => { player.onended = null; player.onerror = null; resolve(); };
-    player.onerror = () => { player.onended = null; player.onerror = null; resolve(); };
-    player.src = url;
+    const done = () => {
+      player.onended = null; player.onerror = null;
+      player.oncanplay = null; player.oncanplaythrough = null;
+      resolve();
+    };
+    const tryPlay = () => {
+      player.oncanplay = null; player.oncanplaythrough = null;
+      player.play().catch(done);
+    };
+    player.onended  = done;
+    player.onerror  = done;
+    player.oncanplay = tryPlay;
+    player.oncanplaythrough = tryPlay;
+    player.src = `data:audio/mpeg;base64,${b64}`;
     player.load();
-    player.play().catch(() => { player.onended = null; player.onerror = null; resolve(); });
   });
 }
 
@@ -520,6 +559,7 @@ async function consumeDebateStream(body) {
   let buffer = '', lastRound = 0;
 
   while (true) {
+    if (_debateStopped) { reader.cancel(); return; }
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -527,6 +567,7 @@ async function consumeDebateStream(body) {
     buffer = events.pop();
 
     for (const raw of events) {
+      if (_debateStopped) { reader.cancel(); return; }
       const lines = raw.trim().split('\n');
       let eventType = 'message', dataStr = '';
       for (const line of lines) {
@@ -542,6 +583,7 @@ async function consumeDebateStream(body) {
       if (eventType === 'moderator_intro') {
         addModeratorBubble(data.text, 'intro');
         if (data.audio_b64) await playBase64Audio(data.audio_b64);
+        if (_debateStopped) return;
         await new Promise(r => setTimeout(r, 300));
       }
       if (eventType === 'turn') {
@@ -553,11 +595,13 @@ async function consumeDebateStream(body) {
         $id('arena-typing').classList.add('hidden');
         addTurnBubble(data);
         if (data.audio_b64) await playBase64Audio(data.audio_b64);
+        if (_debateStopped) return;
         await new Promise(r => setTimeout(r, 400));
       }
       if (eventType === 'moderator_summary') {
         addModeratorBubble(data.text, 'summary');
         if (data.audio_b64) await playBase64Audio(data.audio_b64);
+        if (_debateStopped) return;
         await new Promise(r => setTimeout(r, 600));
       }
       if (eventType === 'done') { $id('arena-typing').classList.add('hidden'); return; }
