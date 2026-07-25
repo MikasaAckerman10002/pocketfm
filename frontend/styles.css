@@ -1,0 +1,112 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f4f6fb;
+  color: #172033;
+}
+
+.screen.hidden {
+  display: none;
+}
+
+.auth-layout,
+#app-screen {
+  display: flex;
+  min-height: 100vh;
+}
+
+.auth-layout {
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+.sidebar {
+  width: 280px;
+  background: #111827;
+  color: #fff;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.sidebar .muted {
+  color: #d1d5db;
+}
+
+.main {
+  flex: 1;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #dbe1ea;
+  border-radius: 16px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+input, textarea, button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #cfd8e3;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+button {
+  background: #ec4899;
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #374151;
+}
+
+.character-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.character-item {
+  text-align: left;
+}
+
+.character-item.active {
+  background: #ec4899;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+}
+
+.controls button {
+  width: auto;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.conversation {
+  white-space: pre-wrap;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 16px;
+  border-radius: 12px;
+  min-height: 120px;
+}
+
+audio {
+  width: 100%;
+  margin-top: 12px;
+}

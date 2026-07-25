@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Character Marketplace</title>
+  <link rel="stylesheet" href="/frontend/styles.css">
+</head>
+<body>
+  <div id="login-screen" class="screen">
+    <div class="auth-layout">
+      <div class="panel">
+        <h1>Login</h1>
+        <input id="login-email" placeholder="Email">
+        <input id="login-password" type="password" placeholder="Password">
+        <button id="login-button">Login</button>
+      </div>
+      <div class="panel">
+        <h1>Signup</h1>
+        <input id="signup-name" placeholder="Name">
+        <input id="signup-email" placeholder="Email">
+        <input id="signup-password" type="password" placeholder="Password">
+        <input id="signup-gender" placeholder="Gender">
+        <textarea id="signup-basics" placeholder="Basic info"></textarea>
+        <button id="signup-button">Create account</button>
+        <p id="auth-error" class="muted"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-screen" class="screen hidden">
+    <aside class="sidebar">
+      <h2>Hi, <span id="username"></span></h2>
+      <p class="muted sidebar-muted">Pick a character and talk to them.</p>
+      <div id="character-list" class="character-list"></div>
+      <button id="logout-button" class="secondary">Logout</button>
+    </aside>
+    <main class="main">
+      <section class="panel">
+        <h1 id="character-name"></h1>
+        <p id="character-description" class="muted"></p>
+      </section>
+      <section class="panel">
+        <h3>Profile</h3>
+        <input id="profile-name" placeholder="Your name">
+        <input id="profile-gender" placeholder="Gender">
+        <textarea id="profile-basics" placeholder="Basic info"></textarea>
+        <button id="save-profile-button">Save profile</button>
+      </section>
+      <section class="panel">
+        <div class="controls">
+          <button id="record-button">Start recording</button>
+          <button id="stop-button" class="secondary" disabled>Stop</button>
+        </div>
+        <p id="status" class="muted">Pick a character and start talking.</p>
+        <audio id="player" controls></audio>
+        <pre id="conversation" class="conversation"></pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="/frontend/app.js"></script>
+</body>
+</html>
