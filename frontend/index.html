@@ -208,11 +208,8 @@
     </nav>
 
     <div class="chat-layout">
-      <!-- Character panel -->
+      <!-- Character sidebar -->
       <aside class="chat-sidebar">
-        <div class="chat-avatar-wrap">
-          <img id="chat-avatar" class="chat-avatar-img" src="" alt="">
-        </div>
         <h2 id="chat-char-name" class="chat-char-name"></h2>
         <p  id="chat-char-desc" class="chat-char-desc"></p>
         <hr class="chat-divider">
@@ -225,6 +222,18 @@
 
       <!-- Chat window -->
       <main class="chat-main">
+
+        <!-- ── Animated PFP orb ─────────────────────────── -->
+        <div class="orb-stage" id="orb-stage">
+          <div class="orb-ring orb-ring--outer" id="orb-ring-outer"></div>
+          <div class="orb-ring orb-ring--mid"   id="orb-ring-mid"></div>
+          <div class="orb-core" id="orb-core">
+            <img id="orb-avatar" class="orb-avatar-img" src="" alt="">
+          </div>
+        </div>
+        <!-- hidden original avatar (kept for JS compat) -->
+        <img id="chat-avatar" src="" alt="" style="display:none">
+
         <div class="chat-messages" id="chat-messages">
           <div class="chat-welcome" id="chat-welcome">
             <p>Start the conversation — press <strong>Record</strong> and speak.</p>

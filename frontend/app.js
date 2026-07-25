@@ -269,10 +269,27 @@ function makeMarketCard(char, isReal) {
 //  CHAT SCREEN
 // ═══════════════════════════════════════════════════════
 
+// ── Orb speaking state (CSS-only, no Web Audio) ─────────
+function _orbSetSpeaking(on) {
+  const outer = $id('orb-ring-outer');
+  const mid   = $id('orb-ring-mid');
+  if (on) {
+    outer.classList.add('orb-ring--speaking');
+    mid.classList.add('orb-ring--speaking');
+  } else {
+    outer.classList.remove('orb-ring--speaking');
+    mid.classList.remove('orb-ring--speaking');
+  }
+}
+
 function openChat(character) {
   currentCharacter = character;
+  // Sync hidden avatar (kept for any legacy references)
   $id('chat-avatar').src  = character.avatar;
   $id('chat-avatar').alt  = character.name;
+  // Orb photo
+  $id('orb-avatar').src = character.avatar;
+  $id('orb-avatar').alt = character.name;
   $id('chat-char-name').textContent = character.name;
   $id('chat-char-desc').textContent = character.description;
   $id('status').textContent = `Ready to talk to ${character.name}.`;
@@ -337,6 +354,12 @@ $id('record-button').onclick = async () => {
     const audioBlob = await res.blob();
     const player = $id('player');
     player.src = URL.createObjectURL(audioBlob);
+
+    // Animate orb while character speaks
+    _orbSetSpeaking(true);
+    player.addEventListener('ended', () => _orbSetSpeaking(false), { once: true });
+    player.addEventListener('pause', () => _orbSetSpeaking(false), { once: true });
+
     player.play();
     $id('status').textContent = `${currentCharacter.name} replied.`;
   };

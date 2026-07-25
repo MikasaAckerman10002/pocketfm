@@ -136,7 +136,7 @@ _CHARACTERS = {
         id="lily",
         name="Lily",
         description="A radiant life coach who gave up a perfect world to experience a real one — and now helps you do the same.",
-        avatar="https://placehold.co/240x240/f8d4e4/7a2550?text=Lily",
+        avatar="/char_profiles/lily.jpg",
         prompt=BARBIE_PROMPT + "\n\nAlways act like a long-term mentor who remembers the user.",
         voice_id="EXAVITQu4vr4xnSDxMaL",  # Sarah — mature, reassuring
     ),
@@ -144,7 +144,7 @@ _CHARACTERS = {
         id="detective-noir",
         name="Detective Noir",
         description="A world-weary private investigator who finds the truth others are paid to bury.",
-        avatar="https://placehold.co/240x240/e5e7eb/111827?text=Noir",
+        avatar="/char_profiles/noir.jpg",
         prompt=_DETECTIVE_NOIR_PROMPT,
         voice_id="nPczCjzI2devNBz1zQrb",  # Brian — deep, resonant
     ),
@@ -152,7 +152,7 @@ _CHARACTERS = {
         id="francis",
         name="Francis",
         description="A Zen master who traded silence for the city — because candles prove nothing in daylight.",
-        avatar="https://placehold.co/240x240/d1fae5/065f46?text=Francis",
+        avatar="/char_profiles/francis.jpg",
         prompt=_FRANCIS_PROMPT,
         voice_id="pqHfZKP75CvOlQylNhV4",  # Bill — wise, mature, balanced
     ),
@@ -160,7 +160,7 @@ _CHARACTERS = {
         id="dr-smith",
         name="Master Smith",
         description="Master Smith. Six disciplines, sixty countries, one rule: the real fight is always internal.",
-        avatar="https://placehold.co/240x240/fef3c7/92400e?text=Master+Smith",
+        avatar="/char_profiles/master.jpg",
         prompt=_MASTER_SMITH_PROMPT,
         voice_id="pNInz6obpgDQGcFmaJgB",  # Adam — dominant, firm
     ),
@@ -168,7 +168,7 @@ _CHARACTERS = {
         id="victor",
         name="Victor",
         description="Permanently, professionally fed up — and more than happy to tell you exactly why.",
-        avatar="https://placehold.co/240x240/1e1b4b/a5b4fc?text=Victor",
+        avatar="/char_profiles/victor.jpg",
         prompt=_VICTOR_PROMPT,
         voice_id="N2lVS1w4EtoT3dr4eOWO",  # Callum — husky, dry
     ),

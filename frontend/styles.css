@@ -679,6 +679,80 @@ textarea.field { resize: vertical; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+/* ── Animated PFP Orb ────────────────────────────────────
+   Centred at the top of the chat area; sits above the
+   message list without obscuring it.
+─────────────────────────────────────────────────────── */
+.orb-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+  margin: 28px auto 8px;
+  flex-shrink: 0;
+}
+
+/* Two concentric rings that pulse / scale with audio */
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(236, 72, 153, 0.35);
+  animation: orb-idle 2.8s ease-in-out infinite;
+  pointer-events: none;
+  transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+}
+.orb-ring--outer {
+  width: 192px;
+  height: 192px;
+  animation-delay: 0s;
+  border-color: rgba(236, 72, 153, 0.2);
+}
+.orb-ring--mid {
+  width: 160px;
+  height: 160px;
+  animation-delay: 0.4s;
+  border-color: rgba(236, 72, 153, 0.35);
+}
+
+@keyframes orb-idle {
+  0%, 100% { transform: scale(1);    opacity: 0.7; }
+  50%       { transform: scale(1.06); opacity: 1;   }
+}
+
+/* While speaking — faster, larger pulse animation */
+.orb-ring--speaking {
+  animation: orb-speak 0.7s ease-in-out infinite !important;
+}
+.orb-ring--outer.orb-ring--speaking { animation-delay: 0s !important; }
+.orb-ring--mid.orb-ring--speaking   { animation-delay: 0.15s !important; }
+
+@keyframes orb-speak {
+  0%, 100% { transform: scale(1);    opacity: 0.5; }
+  50%       { transform: scale(1.22); opacity: 1;   }
+}
+
+/* The photo circle */
+.orb-core {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(236, 72, 153, 0.6);
+  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.15);
+  flex-shrink: 0;
+  z-index: 1;
+  transition: box-shadow 0.1s ease-out;
+}
+.orb-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .chat-messages {

@@ -67,6 +67,7 @@ app.add_middleware(
 )
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 app.mount("/posters", StaticFiles(directory="posters"), name="posters")
+app.mount("/char_profiles", StaticFiles(directory="char_profiles"), name="char_profiles")
 
 
 class UserProfile(BaseModel):
