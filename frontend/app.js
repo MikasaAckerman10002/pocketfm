@@ -25,6 +25,13 @@ function $id(id) { return document.getElementById(id); }
 
 /** Show exactly one screen; hide everything else */
 function showScreen(id) {
+  // When leaving the play screen, restore the hub and hide the iframe.
+  if (id !== 'screen-play') {
+    const hub   = $id('play-hub');
+    const frame = $id('play-detective-frame-wrap');
+    if (hub)   hub.classList.remove('hidden');
+    if (frame) frame.classList.add('hidden');
+  }
   ['screen-landing', 'screen-home', 'screen-marketplace', 'screen-chat', 'screen-debate', 'screen-play']
     .forEach(s => {
       const el = $id(s);
@@ -158,7 +165,7 @@ function renderPosters() {
         <img src="${char.avatar}" alt="${char.name}" onerror="this.style.display='none'">
       </div>
       <div class="poster-body">
-        <p class="poster-creator">Pocket FM Original</p>
+        <p class="poster-creator">PocketX Original</p>
         <h3 class="poster-name">${char.name}</h3>
         <p class="poster-desc">${char.description}</p>
         <button class="poster-btn">Chat with ${char.name}</button>
@@ -217,7 +224,7 @@ function renderMarketplaceCards() {
       avatar: char.avatar,
       description: char.description,
       price: 'Free',
-      creator: 'Pocket FM',
+      creator: 'PocketX',
       rating: '5.0',
       chats: '10K+',
     }, true);
@@ -354,13 +361,14 @@ $id('record-button').onclick = async () => {
     const audioBlob = await res.blob();
     const player = $id('player');
     player.src = URL.createObjectURL(audioBlob);
+    player.load();
 
     // Animate orb while character speaks
     _orbSetSpeaking(true);
     player.addEventListener('ended', () => _orbSetSpeaking(false), { once: true });
     player.addEventListener('pause', () => _orbSetSpeaking(false), { once: true });
 
-    player.play();
+    player.play().catch(() => {});
     $id('status').textContent = `${currentCharacter.name} replied.`;
   };
   recorder.start();
@@ -370,6 +378,12 @@ $id('record-button').onclick = async () => {
 };
 
 $id('stop-button').onclick = () => {
+  // Unlock the audio context synchronously inside this gesture handler so the
+  // player.play() that fires after the async fetch is not blocked by autoplay policy.
+  const player = $id('player');
+  player.play().catch(() => {});
+  player.pause();
+
   recorder.stop();
   stream.getTracks().forEach(t => t.stop());
   $id('record-button').disabled = false;
@@ -667,6 +681,22 @@ $id('nav-home-link4').onclick         = () => showScreen('screen-home');
 $id('nav-marketplace-link5').onclick  = () => showScreen('screen-marketplace');
 $id('nav-debate-link5').onclick       = openDebate;
 $id('logout-button3').onclick         = doLogout;
+
+// ── Detective game launch / back ──────────────────────────────────────────
+$id('play-launch-detective').onclick = () => {
+  const iframe = $id('play-detective-iframe');
+  // Load the game on first launch; subsequent opens reuse the same session.
+  if (!iframe.src || iframe.src === window.location.href) {
+    iframe.src = '/detective/';
+  }
+  $id('play-hub').classList.add('hidden');
+  $id('play-detective-frame-wrap').classList.remove('hidden');
+};
+
+$id('play-frame-back-btn').onclick = () => {
+  $id('play-detective-frame-wrap').classList.add('hidden');
+  $id('play-hub').classList.remove('hidden');
+};
 
 // Marketplace "create" button
 $id('mp-create-btn').onclick = () => alert('Character Studio — coming soon!');

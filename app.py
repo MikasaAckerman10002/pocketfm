@@ -3,6 +3,7 @@
 import base64
 import json
 import os
+import sys
 from pathlib import Path
 from urllib.parse import quote
 from uuid import uuid4
@@ -11,6 +12,16 @@ from uuid import uuid4
 # call across the entire app sees the correct values.
 from dotenv import load_dotenv
 load_dotenv(override=True)
+
+# ── Detective game: load its own .env so GROQ_API_KEY etc. are available ─
+_detective_env = Path(__file__).parent / "detective-game" / "backend" / ".env"
+if _detective_env.exists():
+    load_dotenv(_detective_env, override=False)  # main .env wins if key already set
+
+# Make detective-game/backend importable as a top-level package.
+_detective_backend = Path(__file__).parent / "detective-game" / "backend"
+if str(_detective_backend) not in sys.path:
+    sys.path.insert(0, str(_detective_backend))
 
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,7 +66,7 @@ def _seed_stories() -> None:
                 print(f"[startup] Could not seed story '{story_id}': {exc}")
 
 
-app = FastAPI(title="AI Character API", version="0.6.0")
+app = FastAPI(title="PocketX API", version="0.6.0")
 init_db()
 _seed_stories()
 app.add_middleware(
@@ -68,6 +79,96 @@ app.add_middleware(
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 app.mount("/posters", StaticFiles(directory="posters"), name="posters")
 app.mount("/char_profiles", StaticFiles(directory="char_profiles"), name="char_profiles")
+
+# ── Detective game ─────────────────────────────────────────────────────────
+# The game's React build lives in detective-game/frontend/dist/ and is served
+# at /detective/. Its FastAPI router is mounted at /detective/api so all paths
+# stay on a single origin — no CORS required, no second server to manage.
+#
+# IMPORTANT: uvicorn loads this file as the 'app' module, so sys.modules['app']
+# is already taken. We use importlib to load the detective game's package under
+# a unique alias ('detective_app') to avoid the name collision.
+try:
+    import importlib
+    import importlib.util
+
+    _det_backend = Path(__file__).parent / "detective-game" / "backend"
+
+    def _load_detective_module(dotted: str):
+        """Load a module from the detective-game/backend package tree under the
+        alias 'detective_app.*' so it never collides with this 'app' module."""
+        alias = dotted.replace("app", "detective_app", 1)
+        if alias in sys.modules:
+            return sys.modules[alias]
+        # Resolve file path: e.g. "app.routes.game" -> backend/app/routes/game.py
+        rel = dotted.replace(".", "/")
+        candidates = [_det_backend / rel / "__init__.py", _det_backend / (rel + ".py")]
+        spec = None
+        for c in candidates:
+            if c.exists():
+                spec = importlib.util.spec_from_file_location(alias, c)
+                break
+        if spec is None:
+            raise ImportError(f"Cannot find detective module: {dotted}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[alias] = mod
+        # Make sure every parent package alias exists before executing the module.
+        parts = alias.split(".")
+        for i in range(1, len(parts)):
+            pkg_alias = ".".join(parts[:i])
+            if pkg_alias not in sys.modules:
+                _load_detective_module(dotted.rsplit(".", len(parts) - i)[0])
+        spec.loader.exec_module(mod)
+        return mod
+
+    # Bootstrap: load each module the router depends on, in dependency order.
+    for _m in [
+        "app",
+        "app.config",
+        "app.models",
+        "app.store",
+        "app.view",
+        "app.personas",
+        "app.engine",
+        "app.engine.schema",
+        "app.engine.llm",
+        "app.engine.gemini",
+        "app.engine.groq",
+        "app.engine.case_gen",
+        "app.engine.npc",
+        "app.engine.persona",
+        "app.engine.tts",
+        "app.engine.images",
+        "app.engine.vision",
+        "app.routes",
+        "app.routes.game",
+        "app.main",
+    ]:
+        _load_detective_module(_m)
+
+    _detective_router = sys.modules["detective_app.routes.game"].router
+    _detective_static_dir = sys.modules["detective_app.main"].STATIC_DIR
+
+    app.include_router(_detective_router, prefix="/detective")
+
+    # Generated room art (served by the game backend).
+    app.mount(
+        "/detective/static",
+        StaticFiles(directory=_detective_static_dir),
+        name="detective-static",
+    )
+    print("[detective] Game routes mounted at /detective/api/*")
+
+except Exception as _detective_err:
+    import traceback
+    print(f"[detective] WARNING: routes not loaded — {_detective_err}")
+    traceback.print_exc()
+
+# Serve the compiled React app — must come after the /detective/api routes so
+# the router wins over the static file handler for API paths.
+_detective_dist = Path(__file__).parent / "detective-game" / "frontend" / "dist"
+if _detective_dist.is_dir():
+    app.mount("/detective", StaticFiles(directory=_detective_dist, html=True), name="detective-ui")
 
 
 class UserProfile(BaseModel):

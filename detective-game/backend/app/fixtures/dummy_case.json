@@ -1,0 +1,223 @@
+{
+  "id": "case-ashmere-001",
+  "title": "The Last Pour at Ashmere",
+  "setting": "Ashmere Distillery, a fog-bound family whisky house on the north coast, the night before the fifty-year cask auction",
+  "victim": "Halloran Ashmere, master distiller",
+  "public_setup": "Halloran Ashmere was found in his own barrel cellar at dawn, beneath a toppled cask, twelve hours before the auction that was meant to save the family business. The coroner called it an accident. The staff did not.",
+  "timeline": [
+    "21:40 - Auction appraiser Tovah Blythe finishes cataloguing the fifty-year casks and retires to the tasting room.",
+    "23:15 - Halloran is heard arguing with someone in the still house. Words indistinct.",
+    "00:20 - Odile Fen, cellar hand, claims she went to bed. She did not.",
+    "00:35 - A single heavy impact is heard from the barrel cellar.",
+    "01:10 - Rennick Ashmere is seen washing his hands at the still house sink.",
+    "06:00 - Halloran found beneath cask 47. Cask 47 is empty and weighs almost nothing."
+  ],
+  "rooms": [
+    {
+      "id": "cellar",
+      "name": "The Barrel Cellar",
+      "image_prompt": "A dim stone whisky cellar, rows of oak casks stacked three high, one toppled and split on the flagstones, cold blue dawn light through a high grated window, chalk marks on the barrel heads, moody noir lighting",
+      "clue_ids": ["c1", "c2"],
+      "hotspots": [
+        {
+          "id": "hs-odile",
+          "kind": "npc",
+          "label": "Odile Fen",
+          "npc_name": "Odile Fen",
+          "x": 0.07,
+          "y": 0.36,
+          "w": 0.17,
+          "h": 0.48,
+          "clue_ids": ["c2"]
+        },
+        {
+          "id": "hs-ledger",
+          "kind": "object",
+          "label": "The cellar ledger",
+          "x": 0.68,
+          "y": 0.52,
+          "w": 0.24,
+          "h": 0.3,
+          "clue_ids": ["c1"]
+        },
+        {
+          "id": "hs-cask47",
+          "kind": "object",
+          "label": "Cask 47, toppled",
+          "x": 0.37,
+          "y": 0.58,
+          "w": 0.22,
+          "h": 0.28,
+          "clue_ids": []
+        }
+      ]
+    },
+    {
+      "id": "stillhouse",
+      "name": "The Still House",
+      "image_prompt": "A cramped Victorian still house at night, enormous copper pot still dominating the room, brass tools on a wall rack with one empty hook, steam and low amber lamplight, wet stone floor",
+      "clue_ids": ["c3", "c4"],
+      "hotspots": [
+        {
+          "id": "hs-rennick",
+          "kind": "npc",
+          "label": "Rennick Ashmere",
+          "npc_name": "Rennick Ashmere",
+          "x": 0.57,
+          "y": 0.3,
+          "w": 0.18,
+          "h": 0.52,
+          "clue_ids": ["c4"]
+        },
+        {
+          "id": "hs-toolrack",
+          "kind": "object",
+          "label": "The brass tool rack",
+          "x": 0.11,
+          "y": 0.26,
+          "w": 0.21,
+          "h": 0.36,
+          "clue_ids": ["c3"]
+        },
+        {
+          "id": "hs-still",
+          "kind": "object",
+          "label": "The copper still",
+          "x": 0.34,
+          "y": 0.18,
+          "w": 0.2,
+          "h": 0.52,
+          "clue_ids": []
+        }
+      ]
+    },
+    {
+      "id": "tasting",
+      "name": "The Tasting Room",
+      "image_prompt": "An oak-panelled whisky tasting room, long table with numbered sample glasses, auction catalogue open, tall shuttered windows, green banker's lamp, empty chairs, quiet and expensive",
+      "clue_ids": ["c5"],
+      "hotspots": [
+        {
+          "id": "hs-tovah",
+          "kind": "npc",
+          "label": "Tovah Blythe",
+          "npc_name": "Tovah Blythe",
+          "x": 0.29,
+          "y": 0.32,
+          "w": 0.17,
+          "h": 0.48,
+          "clue_ids": ["c5"]
+        },
+        {
+          "id": "hs-manifest",
+          "kind": "object",
+          "label": "The auction manifest",
+          "x": 0.62,
+          "y": 0.55,
+          "w": 0.23,
+          "h": 0.22,
+          "clue_ids": []
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "name": "Odile Fen",
+      "role": "Cellar hand and apprentice distiller, twenty-three, worked here since she was fifteen",
+      "voice_id": "cgSgspJ2msm6clMCkdW9",
+      "knowledge": [
+        "Halloran taught her everything and treated her better than his own brother did",
+        "She was awake past midnight and did not go to bed when she claims she did",
+        "Casks in the north aisle have sounded hollow for months"
+      ],
+      "secrets": [
+        "She saw Rennick come out of the barrel cellar at around half past midnight, carrying something wrapped in sacking",
+        "She said nothing because Rennick controls whether she keeps her job"
+      ]
+    },
+    {
+      "name": "Rennick Ashmere",
+      "role": "The victim's younger brother, business manager of the distillery, forty-eight",
+      "voice_id": "nPczCjzI2devNBz1zQrb",
+      "knowledge": [
+        "He handled every contract and every buyer for the last nine years",
+        "He says he was asleep by eleven",
+        "He resented being the one who did paperwork while Halloran got the credit"
+      ],
+      "secrets": [
+        "He is personally in debt to the tune of eleven thousand",
+        "He quietly sold the fifty-year casks to a private buyer two years ago and refilled the barrels with cheap spirit",
+        "Halloran discovered the empty casks the night he died"
+      ]
+    },
+    {
+      "name": "Tovah Blythe",
+      "role": "Auction house appraiser, staying overnight to catalogue the fifty-year casks",
+      "voice_id": "XrExE9yKIg1WjnnlVkGX",
+      "knowledge": [
+        "She has appraised four hundred distilleries and knows the weight of a full cask by feel",
+        "She heard raised voices from the still house around quarter past eleven",
+        "She has no personal stake in this family"
+      ],
+      "secrets": [
+        "The manifest she was given had been amended in a second hand, altering cask numbers",
+        "She had already decided to flag the sale as fraudulent before Halloran died"
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "c1",
+      "name": "The Ledger Doesn't Balance",
+      "text": "The cellar ledger logs cask 47 as full at 512 litres. The cask that crushed Halloran was light enough for one man to tip over.",
+      "unlock_hint": "Examining the cellar ledger and comparing the recorded weights against the toppled cask.",
+      "keywords": []
+    },
+    {
+      "id": "c2",
+      "name": "Odile Was Awake",
+      "text": "Odile admits she was not in bed at midnight. She saw Rennick leave the barrel cellar at around 00:30, carrying something wrapped in sacking.",
+      "unlock_hint": "Pressing Odile about where she really was that night, or accusing her of lying.",
+      "keywords": ["midnight", "late", "night", "bed", "asleep", "rennick", "saw", "see", "seen", "lying", "lie", "truth", "really", "hiding"]
+    },
+    {
+      "id": "c3",
+      "name": "The Missing Mallet",
+      "text": "The brass tool rack has eleven hooks and ten tools. The empty hook is outlined in nine years of dust, and the outline is the shape of a cask mallet.",
+      "unlock_hint": "Examining the brass tool rack in the still house.",
+      "keywords": []
+    },
+    {
+      "id": "c4",
+      "name": "Rennick's Debt",
+      "text": "Rennick owes eleven thousand to a private lender. He admits the auction was the only thing standing between him and ruin.",
+      "unlock_hint": "Asking Rennick about money, debt, the auction, or who benefits financially from the sale.",
+      "keywords": ["debt", "money", "owe", "owed", "broke", "finance", "financial", "loan", "lender", "auction", "benefit", "sell", "sold", "buyer", "lying", "lie"]
+    },
+    {
+      "id": "c5",
+      "name": "The Amended Manifest",
+      "text": "Tovah confirms the auction manifest was altered in a second hand. The fifty-year casks were sold to a private buyer two years ago. What was in the cellar was cheap spirit in old barrels.",
+      "unlock_hint": "Asking Tovah about the manifest, the paperwork, the cask inventory, or her professional opinion of the sale.",
+      "keywords": ["manifest", "paperwork", "document", "catalogue", "cask", "casks", "inventory", "sold", "sale", "buyer", "appraisal", "appraise", "weight", "fraud", "forged", "altered"]
+    }
+  ],
+  "motive_options": [
+    "to conceal that he had secretly sold the fifty-year casks and refilled them with cheap spirit",
+    "to settle a long-running dispute over who would inherit the distillery",
+    "to silence a witness to an affair",
+    "out of revenge for being kept from the master distiller's role"
+  ],
+  "weapon_options": [
+    "a brass cask mallet",
+    "a cellar hook",
+    "a poisoned cask sample",
+    "a length of copper piping"
+  ],
+  "solution": {
+    "killer": "Rennick Ashmere",
+    "motive": "to conceal that he had secretly sold the fifty-year casks and refilled them with cheap spirit",
+    "weapon": "a brass cask mallet"
+  }
+}

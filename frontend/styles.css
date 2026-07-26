@@ -1131,3 +1131,139 @@ textarea.field { resize: vertical; }
    UTILITY
 ═══════════════════════════════════════════════════════ */
 .hidden { display: none !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   PLAY SCREEN
+═══════════════════════════════════════════════════════ */
+
+/* Play hub — game card listing */
+.play-hub {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.play-hero {
+  margin-bottom: 40px;
+}
+
+.play-hero-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #f0f0f5;
+}
+
+.play-hero-sub {
+  color: #a0a0b8;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.play-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.play-game-card {
+  background: #13131e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.play-game-card:hover {
+  border-color: rgba(236,72,153,0.45);
+  background: #161622;
+}
+
+.play-game-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ec4899;
+  background: rgba(236,72,153,0.12);
+  border: 1px solid rgba(236,72,153,0.25);
+  border-radius: 6px;
+  padding: 3px 10px;
+  letter-spacing: 0.02em;
+  width: fit-content;
+}
+
+.play-game-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #f0f0f5;
+}
+
+.play-game-desc {
+  font-size: 0.9rem;
+  color: #8888a8;
+  line-height: 1.6;
+  margin: 0;
+  flex: 1;
+}
+
+.play-game-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.play-tag {
+  font-size: 11px;
+  color: #7070a0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+
+.play-launch-btn {
+  margin-top: 6px;
+  align-self: flex-start;
+}
+
+/* Full-screen iframe wrapper */
+.play-frame-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #0b0d12;
+  display: flex;
+  flex-direction: column;
+}
+
+.play-frame-wrap.hidden {
+  display: none !important;
+}
+
+.play-frame-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #0d0d18;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.play-frame-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #c0c0d8;
+}
+
+.play-game-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #0b0d12;
+}
